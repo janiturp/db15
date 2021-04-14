@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fin">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .container {
+            border: 1px solid black;
+            padding: 25px;
+        }
+        .btn-space {
+            margin-right: 25px;
+        }
+        body {
+            background-color: antiquewhite;
+        }
+    </style>
+    <title>Title</title>
+</head>
+<body>
+
+<form role="form">
+    <div class="container" id="wholeContainer">
+        <h1>Syötä päivämääräväli</h1>
+
+
+        <!-- <div class="col-sm-4"> -->
+        <!--<fieldset> -->
+        <div class="controls form-inline">
+            <div class="form-group">
+                <label for="startingDate">Alkupäivämäärä:</label>
+                <input type="date" class="form-control" id="startingDate" name="startingDate"/>
+            </div>
+
+            <div class="form-group">
+                <label for="endingDate">Loppupäivämäärä:</label>
+                <input type="date" class="form-control" id="endingDate" name="endingDate"/>
+            </div>
+            <input onclick="makeQuery()" type="button" value="Lähetä" id="submit"><br>
+        </div>
+
+        <div id="locationInfo" class="controls form-inline">
+        </div>
+
+
+
+        <div>
+        <label class="form-group">Osoite:</label>
+        </div>
+
+        <div id="locationAddress" class="Controls form-inline">
+
+        </div>
+
+        <input type="text" id="gigLocation" placeholder="Kirjoita keikkapaikan nimi.">
+        <input onclick="makeLocationQuery()" type="button" value="lähetä" id="submitLocation">
+    </div>
+</form>
+
+<script>
+
+    var json; //json is global...
+
+    function makeLocationQuery() {
+        var location = document.getElementById("gigLocation").value;
+
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                json = JSON.parse(xmlhttp.responseText);
+                if (json.length > 0) {
+                    //document.getElementById("locationInfo").innerHTML = xmlhttp.responseText;
+                    //json = xmlhttp.responseText;
+                    json = JSON.parse(xmlhttp.responseText);
+                    console.log(json);
+                    showAddress(json);
+                }
+                else {
+                    document.getElementById("locationAddress").innerHTML = "Ei osoitetta tälle paikalle.";
+                }
+
+            }
+        };
+        console.log('Getting address for: ' + location);
+        xmlhttp.open("GET", "http://localhost:8080/api/location?location=" + location, true);
+        xmlhttp.send();
+    }
+
+    function showAddress(json) {
+        console.log('Showing address.')
+        let divElement = document.getElementById("locationAddress");
+        let unOrdered;
+        let listElement, nestedElement, unNestedElement;
+        let string;
+
+        for(let i = 0; i < json.length; i++) {
+            console.log(json[i]);
+
+            unOrdered = document.createElement("ul");
+            unOrdered.setAttribute("class", "del"); // mark all these dynamically created elements to be "deleted"
+            divElement.appendChild(unOrdered);
+
+            listElement = document.createElement("li");
+            listElement.setAttribute("class", "del");
+            string = JSON.stringify(json[i]);
+            console.log('Address: ' + string);
+            listElement.innerHTML = string;
+            unOrdered.appendChild(listElement);
+        }
+    }
+
+    function makeQuery() {
+        var startdate = document.getElementById("startingDate").value;
+        var enddate = document.getElementById("endingDate").value;
+        if (startdate.length == 0) { // fix this and support empty field
+            return;
+        } else {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    json = JSON.parse(xmlhttp.responseText);
+                    if (json.length > 0) {
+                        //document.getElementById("locationInfo").innerHTML = xmlhttp.responseText;
+                        //json = xmlhttp.responseText;
+                        json = JSON.parse(xmlhttp.responseText);
+                        console.log(json);
+                        showList(json);
+                    }
+                    else {
+                        document.getElementById("locationInfo").innerHTML = "Ei tapahtumatietoja tältä ajalta.";
+                    }
+
+                }
+            };
+            xmlhttp.open("GET", "http://localhost:8080/api/events?start=" + startdate+"&end="+enddate, true);
+            xmlhttp.send();
+        }
+    }
+
+
+    function showList(json) {
+
+        var divElement = document.getElementById("locationInfo");
+        var i;
+        var unOrdered;
+        var listElement, nestedElement, unNestedElement;
+        var string;
+        for (var i = 0; i < json.length; i++) {
+            // create a form group div
+            unOrdered = document.createElement("ul");
+            unOrdered.setAttribute("class", "del"); // mark all these dynamically created elements to be "deleted"
+            divElement.appendChild(unOrdered);
+
+            listElement = document.createElement("li");
+            listElement.setAttribute("class", "del");
+            string = json[i].Name;
+            listElement.innerHTML = string;
+            unOrdered.appendChild(listElement);
+            nestedElement = document.createElement("ul");
+            nestedElement.setAttribute("class", "del");
+            listElement.appendChild(nestedElement);
+            unNestedElement = document.createElement("li");
+            unNestedElement.setAttribute("class", "del");
+            string = json[i].Type+", "+json[i].Date+", "+json[i].Location_name;
+            unNestedElement.innerHTML = string;
+            nestedElement.appendChild(unNestedElement);
+        }
+
+        // delete submit-button
+        var submitBtn = document.getElementById("submit");
+        var parent  = document.getElementById("wholeContainer");
+        parent.removeChild(submitBtn);
+        // add ok-button
+        okBtn = document.createElement("input");
+        okBtn.setAttribute("type", "button");
+        okBtn.setAttribute("value", "Ok");
+        okBtn.setAttribute("id", "Ok");
+        okBtn.setAttribute("onclick", "Clear()");
+        parent.appendChild(okBtn);
+    }
+
+    function Clear() {
+        $('.del').remove(); // delete unordered list with jQuery
+        // delete Ok-button
+        var btn = document.getElementById("Ok");
+        var parent  = document.getElementById("wholeContainer");
+        parent.removeChild(btn);
+        // put submit-button again on the form...
+        submitBtn = document.createElement("input");
+        submitBtn.setAttribute("type", "button");
+        submitBtn.setAttribute("value", "Lähetä");
+        submitBtn.setAttribute("id", "submit");
+        submitBtn.setAttribute("onclick", "makeQuery()");
+        var parent  = document.getElementById("wholeContainer");
+        parent.appendChild(submitBtn);
+    }
+
+</script>
+</body>
+
+</html>
